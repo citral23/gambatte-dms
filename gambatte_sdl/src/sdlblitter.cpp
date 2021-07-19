@@ -204,7 +204,7 @@ void SdlBlitter::setBufferDimensions() {
 		selectedscaler == "FullScreen Fast" ||
 		selectedscaler == "FullScreen Smooth")
 	{
-		SetVid(320, 240, 16);
+		SetVid(240, 160, 16);
 	}
 	else if (selectedscaler == "1.5x IPU")
 	{

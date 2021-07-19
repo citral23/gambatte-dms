@@ -736,31 +736,17 @@ static void callback_settings(menu_t *caller_menu) {
     menu_add_entry(menu, menu_entry);
     menu_entry->callback = callback_showfps;
 
-    menu_entry = new_menu_entry(0);
-    menu_entry_set_text(menu_entry, "Scaler");
-    menu_add_entry(menu, menu_entry);
-    menu_entry->callback = callback_scaler;
-
     if (gameiscgb == 0) { // Display only the DMG relevant options.
         menu_entry = new_menu_entry(0);
         menu_entry_set_text(menu_entry, "Mono Palette");
         menu_add_entry(menu, menu_entry);
         menu_entry->callback = callback_dmgpalette;
 
-        menu_entry = new_menu_entry(0);
-        menu_entry_set_text(menu_entry, "DMG Border");
-        menu_add_entry(menu, menu_entry);
-        menu_entry->callback = callback_dmgborderimage;
     } else if (gameiscgb == 1) { // Display only the GBC relevant options.
         menu_entry = new_menu_entry(0);
         menu_entry_set_text(menu_entry, "Color Filter");
         menu_add_entry(menu, menu_entry);
         menu_entry->callback = callback_colorfilter;
-
-        menu_entry = new_menu_entry(0);
-        menu_entry_set_text(menu_entry, "GBC Border");
-        menu_add_entry(menu, menu_entry);
-        menu_entry->callback = callback_gbcborderimage;
     }
 
     menu_entry = new_menu_entry(0);
@@ -1049,10 +1035,8 @@ static void callback_deleteconfig_pergame_apply(menu_t *caller_menu) {
     refreshkeys = 1;                  //
     if(gameiscgb == 0){               //
         loadPalette(palname);         //
-        load_border(dmgbordername);   //
     } else if(gameiscgb == 1){        // apply loaded default config
         loadFilter(filtername);       //
-        load_border(gbcbordername);   //
     }                                 //
     blitter_p->setScreenRes();        //
 
@@ -1297,9 +1281,7 @@ static void callback_selectedscaler(menu_t *caller_menu) {
     selectedscaler = std::string(caller_menu->entries[caller_menu->selected_entry]->text);
     if(gameiscgb == 0){
         loadPalette(palname);
-        load_border(dmgbordername);
     } else if(gameiscgb == 1){
-        load_border(gbcbordername);
     }
     blitter_p->setScreenRes(); /* switch to selected resolution */
     clean_menu_screen(caller_menu);
@@ -1374,10 +1356,8 @@ static void callback_nopalette(menu_t *caller_menu) {
     palname = "NONE";
     loadPalette(palname);
     if(gameiscgb == 1){
-        load_border(gbcbordername);
         caller_menu->quit = 1;
     } else {
-        load_border(dmgbordername);
         caller_menu->quit = 0;
     }
 }
@@ -1387,10 +1367,8 @@ static void callback_defaultpalette(menu_t *caller_menu) {
     palname = "DEFAULT";
     loadPalette(palname);
     if(gameiscgb == 1){
-        load_border(gbcbordername);
         caller_menu->quit = 1;
     } else {
-        load_border(dmgbordername);
         caller_menu->quit = 0;
     }
 }
@@ -1400,10 +1378,8 @@ static void callback_autopalette(menu_t *caller_menu) {
     palname = "AUTO";
     loadPalette(palname);
     if(gameiscgb == 1){
-        load_border(gbcbordername);
         caller_menu->quit = 1;
     } else {
-        load_border(dmgbordername);
         caller_menu->quit = 0;
     }
 }
@@ -1413,10 +1389,8 @@ static void callback_selectedpalette(menu_t *caller_menu) {
     palname = palettelist[caller_menu->selected_entry - 3]->d_name; // we added 3 extra entries before the list, so we do (-3).
     loadPalette(palname);
     if(gameiscgb == 1){
-        load_border(gbcbordername);
         caller_menu->quit = 1;
     } else {
-        load_border(dmgbordername);
         caller_menu->quit = 0;
     }
 }
@@ -1504,226 +1478,6 @@ static void callback_selectedfilter(menu_t *caller_menu) {
     filtername = filterlist[caller_menu->selected_entry - 2]->d_name; // we added 2 extra entries before the list, so we do (-2).
     loadFilter(filtername);
     if(gameiscgb == 1){
-        caller_menu->quit = 0;
-    } else {
-        caller_menu->quit = 1;
-    }
-}
-
-/* ==================== DMG BORDER IMAGE MENU =========================== */
-
-struct dirent **dmgborderlist = NULL;
-int numdmgborders;
-
-static void callback_nodmgborder(menu_t *caller_menu);
-static void callback_defaultdmgborder(menu_t *caller_menu);
-static void callback_autodmgborder(menu_t *caller_menu);
-static void callback_selecteddmgborder(menu_t *caller_menu);
-
-static void callback_dmgborderimage(menu_t *caller_menu) {
-
-    menu_t *menu;
-    menu_entry_t *menu_entry;
-    (void) caller_menu;
-    menu = new_menu();
-
-    menu_set_header(menu, menu_main_title.c_str());
-    menu_set_title(menu, "DMG Border");
-    menu->back_callback = callback_back;
-
-    menu_entry = new_menu_entry(0);
-    menu_entry_set_text(menu_entry, "No border");
-    menu_add_entry(menu, menu_entry);
-    menu_entry->callback = callback_nodmgborder;
-
-    menu_entry = new_menu_entry(0);
-    menu_entry_set_text(menu_entry, "Default");
-    menu_add_entry(menu, menu_entry);
-    menu_entry->callback = callback_defaultdmgborder;
-
-    menu_entry = new_menu_entry(0);
-    menu_entry_set_text(menu_entry, "Auto");
-    menu_add_entry(menu, menu_entry);
-    menu_entry->callback = callback_autodmgborder;
-
-    std::string borderdir = (homedir + "/.gambatte/borders");
-    numdmgborders = scandir(borderdir.c_str(), &dmgborderlist, parse_ext_png, alphasort);
-    if (numdmgborders <= 0) {
-        printf("scandir for ./gambatte/borders/ failed.");
-    } else {
-        for (int i = 0; i < numdmgborders; ++i){
-            menu_entry = new_menu_entry(0);
-            menu_entry_set_text_no_ext(menu_entry, dmgborderlist[i]->d_name);
-            menu_add_entry(menu, menu_entry);
-            menu_entry->callback = callback_selecteddmgborder;
-        }
-    }
-
-    menu->selected_entry = currentEntryInList(menu, dmgbordername, 1);
-    
-    playMenuSound_in();
-    menu_main(menu);
-
-    delete_menu(menu);
-
-    for (int i = 0; i < numdmgborders; ++i){
-        free(dmgborderlist[i]);
-    }
-    free(dmgborderlist);
-}
-
-static void callback_nodmgborder(menu_t *caller_menu) {
-    playMenuSound_ok();
-    dmgbordername = "NONE";
-    if(gameiscgb == 1){
-        caller_menu->quit = 1;
-    } else {
-        load_border(dmgbordername);
-        clean_menu_screen(caller_menu);
-        caller_menu->quit = 0;
-    }
-}
-
-static void callback_defaultdmgborder(menu_t *caller_menu) {
-    playMenuSound_ok();
-    dmgbordername = "DEFAULT";
-    if(gameiscgb == 1){
-        caller_menu->quit = 1;
-    } else {
-        load_border(dmgbordername);
-        clean_menu_screen(caller_menu);
-        caller_menu->quit = 0;
-    }
-}
-
-static void callback_autodmgborder(menu_t *caller_menu) {
-    playMenuSound_ok();
-    dmgbordername = "AUTO";
-    if(gameiscgb == 1){
-        caller_menu->quit = 1;
-    } else {
-        load_border(dmgbordername);
-        clean_menu_screen(caller_menu);
-        caller_menu->quit = 0;
-    }
-}
-
-static void callback_selecteddmgborder(menu_t *caller_menu) {
-    playMenuSound_ok();
-    dmgbordername = dmgborderlist[caller_menu->selected_entry - 3]->d_name; // we added 3 extra entries before the list, so we do (-3).
-    if(gameiscgb == 1){
-        caller_menu->quit = 1;
-    } else {
-        load_border(dmgbordername);
-        clean_menu_screen(caller_menu);
-        caller_menu->quit = 0;
-    }
-}
-
-/* ==================== GBC BORDER IMAGE MENU =========================== */
-
-struct dirent **gbcborderlist = NULL;
-int numgbcborders;
-
-static void callback_nogbcborder(menu_t *caller_menu);
-static void callback_defaultgbcborder(menu_t *caller_menu);
-static void callback_autogbcborder(menu_t *caller_menu);
-static void callback_selectedgbcborder(menu_t *caller_menu);
-
-static void callback_gbcborderimage(menu_t *caller_menu) {
-
-    menu_t *menu;
-    menu_entry_t *menu_entry;
-    (void) caller_menu;
-    menu = new_menu();
-
-    menu_set_header(menu, menu_main_title.c_str());
-    menu_set_title(menu, "GBC Border");
-    menu->back_callback = callback_back;
-
-    menu_entry = new_menu_entry(0);
-    menu_entry_set_text(menu_entry, "No border");
-    menu_add_entry(menu, menu_entry);
-    menu_entry->callback = callback_nogbcborder;
-
-    menu_entry = new_menu_entry(0);
-    menu_entry_set_text(menu_entry, "Default");
-    menu_add_entry(menu, menu_entry);
-    menu_entry->callback = callback_defaultgbcborder;
-
-    menu_entry = new_menu_entry(0);
-    menu_entry_set_text(menu_entry, "Auto");
-    menu_add_entry(menu, menu_entry);
-    menu_entry->callback = callback_autogbcborder;
-
-    std::string borderdir = (homedir + "/.gambatte/borders");
-    numgbcborders = scandir(borderdir.c_str(), &gbcborderlist, parse_ext_png, alphasort);
-    if (numgbcborders <= 0) {
-        printf("scandir for ./gambatte/borders/ failed.");
-    } else {
-        for (int i = 0; i < numgbcborders; ++i){
-            menu_entry = new_menu_entry(0);
-            menu_entry_set_text_no_ext(menu_entry, gbcborderlist[i]->d_name);
-            menu_add_entry(menu, menu_entry);
-            menu_entry->callback = callback_selectedgbcborder;
-        }
-    }
-
-    menu->selected_entry = currentEntryInList(menu, gbcbordername, 1);
-    
-    playMenuSound_in();
-    menu_main(menu);
-
-    delete_menu(menu);
-
-    for (int i = 0; i < numgbcborders; ++i){
-        free(gbcborderlist[i]);
-    }
-    free(gbcborderlist);
-}
-
-static void callback_nogbcborder(menu_t *caller_menu) {
-    playMenuSound_ok();
-    gbcbordername = "NONE";
-    if(gameiscgb == 1){
-        load_border(gbcbordername);
-        clean_menu_screen(caller_menu);
-        caller_menu->quit = 0;
-    } else {
-        caller_menu->quit = 1;
-    }
-}
-
-static void callback_defaultgbcborder(menu_t *caller_menu) {
-    playMenuSound_ok();
-    gbcbordername = "DEFAULT";
-    if(gameiscgb == 1){
-        load_border(gbcbordername);
-        clean_menu_screen(caller_menu);
-        caller_menu->quit = 0;
-    } else {
-        caller_menu->quit = 1;
-    }
-}
-
-static void callback_autogbcborder(menu_t *caller_menu) {
-    playMenuSound_ok();
-    gbcbordername = "AUTO";
-    if(gameiscgb == 1){
-        load_border(gbcbordername);
-        clean_menu_screen(caller_menu);
-        caller_menu->quit = 0;
-    } else {
-        caller_menu->quit = 1;
-    }
-}
-
-static void callback_selectedgbcborder(menu_t *caller_menu) {
-    playMenuSound_ok();
-    gbcbordername = gbcborderlist[caller_menu->selected_entry - 3]->d_name; // we added 3 extra entries before the list, so we do (-3).
-    if(gameiscgb == 1){
-        load_border(gbcbordername);
-        clean_menu_screen(caller_menu);
         caller_menu->quit = 0;
     } else {
         caller_menu->quit = 1;

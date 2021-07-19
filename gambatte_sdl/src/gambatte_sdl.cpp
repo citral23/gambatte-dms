@@ -1071,10 +1071,8 @@ bool GambatteSdl::handleEvents(BlitterWrapper &blitter) {
 					}
 				} else {
 					switch (e.key.keysym.sym) {
-					case SDLK_RCTRL: // R button in bittboy / Reset button in PocketGo / Menu button in PlayGO
-					case SDLK_BACKSPACE: // R trigger
+					case SDLK_ESCAPE: // Start + Select
 					case SDLK_HOME: // Power button in Opendingux devices
-					case SDLK_END: // Power/Suspend button in RetroFW devices
 						if((menuout == -1) && (menuin == -1)){
 							ffwdtoggle = 0;
 							main_menu_with_anim();
